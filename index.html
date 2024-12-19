@@ -85,8 +85,9 @@
             <div style="float: left; width: 600px; margin-left: 10px; text-align: left;">
                 <h3>Varmepumpekalkulasjon</h3>
                 <p>For å berekne effektiviten til ei varmepumpe brukar vi Coefficient of Performance (COP), som viser kor mange einingar varme (eller kulde) pumpa gjev per eining elektrisitet den bruker. Til dømes, viss ei varmepumpe har ein COP på 3, betyr det at ho gjev 3 kWh varme for kvar 1 kWh elektrisitet som blir brukt. COP vil variere med utetemperaturen: </p>
-                <label for="outsideTemp">Utetemperatur: </label>
-                <input id = "outsideTemp" type="number" value="7" style="width: 40px" onchange="getEnergyPrice()">
+                <p>Utetemperatur: <span id="outsideTemp"></span> </p>
+                <!--<label for="outsideTemp">Utetemperatur: </label>
+                <input id = "outsideTemp" type="number" value="7" style="width: 40px" onchange="getEnergyPrice()"> -->
                 <p>Ved oppgitt temperatur så kan vi estimere ein COP på: <span id=heatpumpCOP></span></p>
                 <p>Då kan vi dele straumprisen på COP, og varmepumpepris denne timen blir dermed (kr/kwh): <strong><span id=heatpumpPrice></span></strong></p>
             </div>

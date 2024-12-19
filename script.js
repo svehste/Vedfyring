@@ -25,8 +25,8 @@ function getEnergyPrice() {
             const woodPrice = getWoodPrice(); // Get the wood price
 
             // Calculate the price for the heat pump
-            const heatpumpEfficiency = heatpumpCOP();
-            const heatpumpPrice = data.map(item => calculatePrice(item.NOK_per_kWh) / heatpumpEfficiency);
+            const heatpumpEff = heatpumpCOP();
+            const heatpumpPrice = data.map(item => calculatePrice(item.NOK_per_kWh) / heatpumpEff);
             
 
             drawChart(energyPrices, woodPrice,currentHour,heatpumpPrice); // Draw the chart with fetched data
@@ -113,14 +113,11 @@ function calculatePrice(price) {
         }
     }
 
-    const heatpumpPrice = inklNettleige / heatpumpCOP(); //Calculate the price of the heat pump
-
     //Display the different prices on the web page. 
     document.getElementById('totalPrice').textContent = totalPrice.toFixed(2);
     document.getElementById('exVatPrice').textContent = exVatPrice.toFixed(2);
     document.getElementById('subsidizedPrice').textContent = subsidizedPrice.toFixed(2);
     document.getElementById('adjustedPrice').textContent = adjustedPrice.toFixed(2);
-    document.getElementById('heatpumpPrice').textContent = heatpumpPrice.toFixed(2);
     updateInklNettleige(inklNettleige);
 
     return inklNettleige;
@@ -136,7 +133,7 @@ function updateInklNettleige(value) {
 
 // Function to update the traffic light color based on the price
 function updateTrafficLight(price) {
-    //Remove all text and colors
+    // Remove all text and colors
     document.getElementById('red').style.backgroundColor = '#333';
     document.getElementById('yellow').style.backgroundColor = '#333';
     document.getElementById('green').style.backgroundColor = '#333';
@@ -144,8 +141,8 @@ function updateTrafficLight(price) {
     document.getElementById('yellow-text').style.display = 'none';
     document.getElementById('green-text').style.display = 'none';
 
-    const inklNettleige = calculatePrice(price); //Calculate the electricity price
-    const woodPrice = getWoodPrice(); //Calculate the price of wood
+    const inklNettleige = calculatePrice(price); // Calculate the electricity price
+    const woodPrice = getWoodPrice(); // Calculate the price of wood
 
     if (inklNettleige >= woodPrice) {
         document.getElementById('green').style.backgroundColor = 'green';
@@ -159,9 +156,59 @@ function updateTrafficLight(price) {
     }
 }
 
-//Function for drawing the chart
-function drawChart(energyPrices, woodPrice, currentHour,heatpumpPrice) {
-    //If the chart already exists, it needs to be reset
+// Function to fetch the temperature from the met.no API
+async function fetchTemperature() {
+    const response = await fetch('https://api.met.no/weatherapi/nowcast/2.0/complete?lat=60.3894&lon=5.33', {
+        headers: {
+            'User-Agent': 'YourAppName/1.0 (your.email@example.com)' // Replace with your app name and email
+        }
+    });
+    const data = await response.json();
+    const outsideTemp = data.properties.timeseries[0].data.instant.details.air_temperature;
+    document.getElementById('outsideTemp').textContent = outsideTemp.toFixed(2);
+    return outsideTemp;
+}
+
+// Function to calculate COP based on temperature
+async function heatpumpCOP() {
+    const outsideTemp = await fetchTemperature();
+    let COP; // Coefficient of performance for the heat pump
+
+    if (outsideTemp >= 0) {
+        COP = 4.8;
+    } else if (outsideTemp < 0 && outsideTemp >= -4) {
+        COP = 4.1;
+    } else if (outsideTemp < -4 && outsideTemp >= -7) {
+        COP = 3.1;
+    } else if (outsideTemp < -7 && outsideTemp >= -10) {
+        COP = 2.5;
+    } else if (outsideTemp < -10 && outsideTemp >= -15) {
+        COP = 2.3;
+    } else {
+        COP = 1.6;
+    }
+
+    document.getElementById('heatpumpCOP').textContent = COP.toFixed(2);
+    return COP;
+}
+
+// Function to calculate heat pump price
+async function calculateHeatpumpPrice() {
+    const COP = await heatpumpCOP();
+    const electricityPrice = parseFloat(document.getElementById('totalPrice').textContent);
+
+    if (!isNaN(COP) && !isNaN(electricityPrice) && COP > 0) {
+        const heatpumpPrice = electricityPrice / COP;
+        document.getElementById('heatpumpPrice').textContent = heatpumpPrice.toFixed(2);
+    } else {
+        document.getElementById('heatpumpPrice').textContent = 'N/A';
+    }
+}
+
+
+// Function for drawing the chart
+function drawChart(energyPrices, woodPrice, currentHour, heatpumpPrice) {
+    // If the chart already exists, it needs to be reset
     if (energyChart) { 
         energyChart.destroy(); 
     }
@@ -180,9 +227,9 @@ function drawChart(energyPrices, woodPrice, currentHour,heatpumpPrice) {
                 data: Array(24).fill(woodPrice),
                 borderColor: 'green',
                 fill: false
-            },{
+            }, {
                 label: 'Estimert varmepumpepris (NOK/kWh)',
-                data: heatpumpPrice,
+                data: Array(24).fill(heatpumpPrice),
                 borderColor: 'red',
                 fill: false
             }]
@@ -206,30 +253,9 @@ function drawChart(energyPrices, woodPrice, currentHour,heatpumpPrice) {
     });
 }
 
-function heatpumpCOP() {
-
-    const outsideTemp = document.getElementById('outsideTemp').value;
-    let COP; //Coefficient of performance for the heat pump
-
-    if (outsideTemp >= 0) {
-        COP = 4.8;
-    } else if (outsideTemp < 0 && outsideTemp >= -4) {
-        COP = 4.1;
-    } else if (outsideTemp < -4 && outsideTemp >= -7) {
-        COP = 3.1;
-    } else if (outsideTemp < -7 && outsideTemp >= -10) {
-        COP = 2.5;
-    } else if (outsideTemp < -10 && outsideTemp >= -15) {
-        COP = 2.3;
-    } else {
-        COP = 1.6;
-    }
-
-    document.getElementById('heatpumpCOP').textContent = COP.toFixed(2);
-
-    return COP;
-}
 // Call the updateCurrentHour and getEnergyPrice function when the page loads
 window.onload = function() { 
     getEnergyPrice();
+    heatpumpCOP();
+    calculateHeatpumpPrice();
 };
